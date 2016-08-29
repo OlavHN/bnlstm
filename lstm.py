@@ -30,7 +30,11 @@ class LSTMCell(RNNCell):
                 initializer=bn_lstm_identity_initializer(0.95))
             bias = tf.get_variable('bias', [4 * self.num_units])
 
-            hidden = tf.matmul(x, W_xh) + tf.matmul(h, W_hh) + bias
+            # hidden = tf.matmul(x, W_xh) + tf.matmul(h, W_hh) + bias
+            # improve speed by concat.
+            concat = tf.concat(1, [x, h])
+            W_both = tf.concat(0, [W_xh, W_hh])
+            hidden = tf.matmul(concat, W_both) + bias
 
             i, j, f, o = tf.split(1, 4, hidden)
 
