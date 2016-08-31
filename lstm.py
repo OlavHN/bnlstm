@@ -45,8 +45,9 @@ class LSTMCell(RNNCell):
 
 class BNLSTMCell(RNNCell):
     '''Batch normalized LSTM as described in arxiv.org/abs/1603.09025'''
-    def __init__(self, num_units):
+    def __init__(self, num_units, training):
         self.num_units = num_units
+        self.training = training
 
     @property
     def state_size(self):
@@ -72,29 +73,15 @@ class BNLSTMCell(RNNCell):
             xh = tf.matmul(x, W_xh)
             hh = tf.matmul(h, W_hh)
 
-            mean_xh, var_xh = tf.nn.moments(xh, [0])
-            xh_scale = tf.get_variable('xh_scale', [4 * self.num_units], initializer=tf.constant_initializer(0.1))
-
-            mean_hh, var_hh = tf.nn.moments(hh, [0])
-            hh_scale = tf.get_variable('hh_scale', [4 * self.num_units], initializer=tf.constant_initializer(0.1))
-
-            static_offset = tf.constant(0, dtype=tf.float32, shape=[4 * self.num_units])
-            epsilon = 1e-3
-
-            bn_xh = tf.nn.batch_normalization(xh, mean_xh, var_xh, static_offset, xh_scale, epsilon)
-            bn_hh = tf.nn.batch_normalization(hh, mean_hh, var_hh, static_offset, hh_scale, epsilon)
+            bn_xh = batch_norm(xh, 'xh', self.training)
+            bn_hh = batch_norm(hh, 'hh', self.training)
 
             hidden = bn_xh + bn_hh + bias
 
             i, j, f, o = tf.split(1, 4, hidden)
 
             new_c = c * tf.sigmoid(f) + tf.sigmoid(i) * tf.tanh(j)
-
-            mean_c, var_c = tf.nn.moments(new_c, [0])
-            c_scale = tf.get_variable('c_scale', [self.num_units], initializer=tf.constant_initializer(0.1))
-            c_offset = tf.get_variable('c_offset', [self.num_units])
-
-            bn_new_c = tf.nn.batch_normalization(new_c, mean_c, var_c, c_offset, c_scale, epsilon)
+            bn_new_c = batch_norm(new_c, 'c', self.training)
 
             new_h = tf.tanh(bn_new_c) * tf.sigmoid(o)
 
@@ -125,3 +112,28 @@ def orthonogal_initializer():
     def _initializer(shape, dtype=tf.float32):
         return tf.constant(orthonogal(shape), dtype)
     return _initializer
+
+def batch_norm(x, name_scope, training, epsilon=1e-3, decay=0.999):
+    '''Assume 2d [batch, values] tensor'''
+
+    with tf.variable_scope(name_scope):
+        size = x.get_shape().as_list()[1]
+
+        scale = tf.get_variable('scale', [size], initializer=tf.constant_initializer(0.1))
+        offset = tf.get_variable('offset', [size])
+
+        pop_mean = tf.get_variable('pop_mean', [size], initializer=tf.zeros_initializer)
+        pop_var = tf.get_variable('pop_var', [size], initializer=tf.ones_initializer)
+        batch_mean, batch_var = tf.nn.moments(x, [0])
+
+        train_mean_op = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+        train_var_op = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+
+        def batch_statistics():
+            with tf.control_dependencies([train_mean_op, train_var_op]):
+                return tf.nn.batch_normalization(x, batch_mean, batch_var, offset, scale, epsilon)
+
+        def population_statistics():
+            return tf.nn.batch_normalization(x, pop_mean, pop_var, offset, scale, epsilon)
+
+        return tf.cond(training, batch_statistics, population_statistics)

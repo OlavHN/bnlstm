@@ -11,8 +11,10 @@ hidden_size = 100
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
 x = tf.placeholder(tf.float32, [None, 784])
+training = tf.placeholder(tf.bool)
+
 x_inp = tf.expand_dims(x, -1)
-lstm = BNLSTMCell(hidden_size)#LSTMCell(hidden_size)
+lstm = BNLSTMCell(hidden_size, training) #LSTMCell(hidden_size)
 
 #c, h
 initialState = (
@@ -34,7 +36,7 @@ cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=
 
 optimizer = tf.train.AdamOptimizer()
 gvs = optimizer.compute_gradients(cross_entropy)
-capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+capped_gvs = [(None if grad is None else tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
 train_step = optimizer.apply_gradients(capped_gvs)
 
 correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
@@ -44,10 +46,11 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 tf.scalar_summary("accuracy", accuracy)
 tf.scalar_summary("xe_loss", cross_entropy)
 for (grad, var), (capped_grad, _) in zip(gvs, capped_gvs):
-    tf.histogram_summary('grad/{}'.format(var.name), capped_grad)
-    tf.histogram_summary('capped_fraction/{}'.format(var.name),
-        tf.nn.zero_fraction(grad - capped_grad))
-    tf.histogram_summary('weight/{}'.format(var.name), var)
+    if grad is not None:
+        tf.histogram_summary('grad/{}'.format(var.name), capped_grad)
+        tf.histogram_summary('capped_fraction/{}'.format(var.name),
+            tf.nn.zero_fraction(grad - capped_grad))
+        tf.histogram_summary('weight/{}'.format(var.name), var)
 
 merged = tf.merge_all_summaries()
 
@@ -61,11 +64,11 @@ writer = tf.train.SummaryWriter("logs", sess.graph)
 current_time = time.time()
 for i in range(100000):
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-    loss, _ = sess.run([cross_entropy, train_step], feed_dict={x: batch_xs, y_: batch_ys})
+    loss, _ = sess.run([cross_entropy, train_step], feed_dict={x: batch_xs, y_: batch_ys, training: True})
     step_time = time.time() - current_time
     current_time = time.time()
     if i % 100 == 0:
         batch_xs, batch_ys = mnist.validation.next_batch(batch_size)
-        summary_str = sess.run(merged, feed_dict={x: batch_xs, y_: batch_ys})
+        summary_str = sess.run(merged, feed_dict={x: batch_xs, y_: batch_ys, training: False})
         writer.add_summary(summary_str, i)
     print(loss, step_time)
