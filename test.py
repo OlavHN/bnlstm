@@ -1,4 +1,6 @@
 import time
+import uuid
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.rnn import dynamic_rnn
@@ -59,7 +61,10 @@ init = tf.initialize_all_variables()
 sess = tf.Session()
 sess.run(init)
 
-writer = tf.train.SummaryWriter("logs", sess.graph)
+logdir = 'logs/' + str(uuid.uuid4())
+os.makedirs(logdir)
+print('logging to ' + logdir)
+writer = tf.train.SummaryWriter(logdir, sess.graph)
 
 current_time = time.time()
 for i in range(100000):
