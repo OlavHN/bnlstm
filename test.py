@@ -67,6 +67,8 @@ print('logging to ' + logdir)
 writer = tf.train.SummaryWriter(logdir, sess.graph)
 
 current_time = time.time()
+print("Using population statitics (training: False) at test time gives worse results than batch statitics")
+
 for i in range(100000):
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
     loss, _ = sess.run([cross_entropy, train_step], feed_dict={x: batch_xs, y_: batch_ys, training: True})
