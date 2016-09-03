@@ -122,8 +122,8 @@ def batch_norm(x, name_scope, training, epsilon=1e-3, decay=0.999):
         scale = tf.get_variable('scale', [size], initializer=tf.constant_initializer(0.1))
         offset = tf.get_variable('offset', [size])
 
-        pop_mean = tf.get_variable('pop_mean', [size], initializer=tf.zeros_initializer)
-        pop_var = tf.get_variable('pop_var', [size], initializer=tf.ones_initializer)
+        pop_mean = tf.get_variable('pop_mean', [size], initializer=tf.zeros_initializer, trainable=False)
+        pop_var = tf.get_variable('pop_var', [size], initializer=tf.ones_initializer, trainable=False)
         batch_mean, batch_var = tf.nn.moments(x, [0])
 
         train_mean_op = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
