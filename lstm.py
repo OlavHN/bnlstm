@@ -24,7 +24,7 @@ class LSTMCell(RNNCell):
             x_size = x.get_shape().as_list()[1]
             W_xh = tf.get_variable('W_xh',
                 [x_size, 4 * self.num_units],
-                initializer=orthonogal_initializer())
+                initializer=orthogonal_initializer())
             W_hh = tf.get_variable('W_hh',
                 [self.num_units, 4 * self.num_units],
                 initializer=bn_lstm_identity_initializer(0.95))
@@ -64,7 +64,7 @@ class BNLSTMCell(RNNCell):
             x_size = x.get_shape().as_list()[1]
             W_xh = tf.get_variable('W_xh',
                 [x_size, 4 * self.num_units],
-                initializer=orthonogal_initializer())
+                initializer=orthogonal_initializer())
             W_hh = tf.get_variable('W_hh',
                 [self.num_units, 4 * self.num_units],
                 initializer=bn_lstm_identity_initializer(0.95))
@@ -87,7 +87,7 @@ class BNLSTMCell(RNNCell):
 
             return new_h, (new_c, new_h)
 
-def orthonogal(shape):
+def orthogonal(shape):
     flat_shape = (shape[0], np.prod(shape[1:]))
     a = np.random.normal(0.0, 1.0, flat_shape)
     u, _, v = np.linalg.svd(a, full_matrices=False)
@@ -101,16 +101,16 @@ def bn_lstm_identity_initializer(scale):
         # gate (j) is identity
         t = np.zeros(shape)
         t[:, size:size * 2] = np.identity(size) * scale
-        t[:, :size] = orthonogal([size, size])
-        t[:, size * 2:size * 3] = orthonogal([size, size])
-        t[:, size * 3:] = orthonogal([size, size])
+        t[:, :size] = orthogonal([size, size])
+        t[:, size * 2:size * 3] = orthogonal([size, size])
+        t[:, size * 3:] = orthogonal([size, size])
         return tf.constant(t, dtype)
 
     return _initializer
 
-def orthonogal_initializer():
+def orthogonal_initializer():
     def _initializer(shape, dtype=tf.float32):
-        return tf.constant(orthonogal(shape), dtype)
+        return tf.constant(orthogonal(shape), dtype)
     return _initializer
 
 def batch_norm(x, name_scope, training, epsilon=1e-3, decay=0.999):

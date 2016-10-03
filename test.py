@@ -4,7 +4,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.rnn import dynamic_rnn
-from lstm import LSTMCell, BNLSTMCell, orthonogal_initializer
+from lstm import LSTMCell, BNLSTMCell, orthogonal_initializer
 from tensorflow.examples.tutorials.mnist import input_data
 
 batch_size = 100
@@ -27,7 +27,7 @@ outputs, state = dynamic_rnn(lstm, x_inp, initial_state=initialState, dtype=tf.f
 
 _, final_hidden = state
 
-W = tf.get_variable('W', [hidden_size, 10], initializer=orthonogal_initializer())
+W = tf.get_variable('W', [hidden_size, 10], initializer=orthogonal_initializer())
 b = tf.get_variable('b', [10])
 
 y = tf.nn.softmax(tf.matmul(final_hidden, W) + b)
@@ -67,7 +67,7 @@ print('logging to ' + logdir)
 writer = tf.train.SummaryWriter(logdir, sess.graph)
 
 current_time = time.time()
-print("Using population statitics (training: False) at test time gives worse results than batch statitics")
+print("Using population statistics (training: False) at test time gives worse results than batch statistics")
 
 for i in range(100000):
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
