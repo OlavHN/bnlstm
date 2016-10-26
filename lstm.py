@@ -95,7 +95,7 @@ def orthogonal(shape):
     return q.reshape(shape)
 
 def bn_lstm_identity_initializer(scale):
-    def _initializer(shape, dtype=tf.float32):
+    def _initializer(shape, dtype=tf.float32, partition_info=None):
         '''Ugly cause LSTM params calculated in one matrix multiply'''
         size = shape[0]
         # gate (j) is identity
@@ -109,7 +109,7 @@ def bn_lstm_identity_initializer(scale):
     return _initializer
 
 def orthogonal_initializer():
-    def _initializer(shape, dtype=tf.float32):
+    def _initializer(shape, dtype=tf.float32, partition_info=None):
         return tf.constant(orthogonal(shape), dtype)
     return _initializer
 
